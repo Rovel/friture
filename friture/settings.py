@@ -38,6 +38,8 @@ Friture will now exit.
 class Settings_Dialog(QtWidgets.QDialog, Ui_Settings_Dialog):
     show_playback_changed = pyqtSignal(bool)
     history_length_changed = pyqtSignal(int)
+    theme_changed = pyqtSignal(str)
+    transparency_changed = pyqtSignal(bool)
 
     def __init__(self, parent):
         QtWidgets.QDialog.__init__(self, parent)
@@ -81,10 +83,16 @@ class Settings_Dialog(QtWidgets.QDialog, Ui_Settings_Dialog):
         self.radioButton_duo.toggled.connect(self.duo_input_type_selected)
         self.checkbox_showPlayback.stateChanged.connect(self.show_playback_checkbox_changed)
         self.spinBox_historyLength.editingFinished.connect(self.history_length_edit_finished)
+        self.comboBox_theme.currentTextChanged.connect(self.theme_changed)
+        self.checkbox_transparency.stateChanged.connect(self.transparency_checkbox_changed)
 
     @pyqtProperty(bool, notify=show_playback_changed) # type: ignore
     def show_playback(self) -> bool:
         return bool(self.checkbox_showPlayback.checkState())
+
+    @pyqtProperty(bool) # type: ignore
+    def transparency_enabled(self) -> bool:
+        return bool(self.checkbox_transparency.checkState())
 
     # slot
     # used when no audio input device has been found, to exit immediately
@@ -179,6 +187,10 @@ class Settings_Dialog(QtWidgets.QDialog, Ui_Settings_Dialog):
     def history_length_edit_finished(self) -> None:
         self.history_length_changed.emit(self.spinBox_historyLength.value())
 
+    # slot
+    def transparency_checkbox_changed(self, state: int) -> None:
+        self.transparency_changed.emit(bool(state))
+
     # method
     def saveState(self, settings):
         # for the input device, we search by name instead of index, since
@@ -189,6 +201,8 @@ class Settings_Dialog(QtWidgets.QDialog, Ui_Settings_Dialog):
         settings.setValue("duoInput", self.inputTypeButtonGroup.checkedId())
         settings.setValue("showPlayback", self.checkbox_showPlayback.checkState())
         settings.setValue("historyLength", self.spinBox_historyLength.value())
+        settings.setValue("transparency", self.checkbox_transparency.checkState())
+        settings.setValue("theme", self.comboBox_theme.currentText())
 
     # method
     def restoreState(self, settings):
@@ -207,3 +221,12 @@ class Settings_Dialog(QtWidgets.QDialog, Ui_Settings_Dialog):
         self.spinBox_historyLength.setValue(settings.value("historyLength", 30, type=int))
         # need to emit this because setValue doesn't emit editFinished
         self.history_length_changed.emit(self.spinBox_historyLength.value())
+        self.checkbox_transparency.setCheckState(settings.value("transparency", 2, type=int))  # Default to checked (transparent)
+        
+        # restore theme setting
+        theme_text = settings.value("theme", "System Default", type=str)
+        theme_index = self.comboBox_theme.findText(theme_text)
+        if theme_index >= 0:
+            self.comboBox_theme.setCurrentIndex(theme_index)
+        # emit the theme changed signal to apply the theme
+        self.theme_changed.emit(self.comboBox_theme.currentText())

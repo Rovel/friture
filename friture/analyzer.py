@@ -45,7 +45,7 @@ from friture.settings import Settings_Dialog  # Setting dialog
 from friture.audiobuffer import AudioBuffer  # audio ring buffer class
 from friture.audiobackend import AudioBackend  # audio backend class
 from friture.dockmanager import DockManager
-from friture.tileLayout import TileLayout
+from friture.tilelayout import TileLayout
 from friture.level_view_model import LevelViewModel
 from friture.level_data import LevelData
 from friture.levels import Levels_Widget
@@ -65,6 +65,7 @@ from friture.spectrum_data import Spectrum_Data
 from friture.plotFilledCurve import PlotFilledCurve
 from friture.filled_curve import FilledCurve
 from friture.qml_tools import qml_url, raise_if_error
+from friture.theme import apply_theme
 from friture.generators.sine import Sine_Generator_Settings_View_Model
 from friture.generators.white import White_Generator_Settings_View_Model
 from friture.generators.pink import Pink_Generator_Settings_View_Model
@@ -198,6 +199,8 @@ class Friture(QMainWindow, ):
         # settings changes
         self.settings_dialog.show_playback_changed.connect(self.show_playback_changed)
         self.settings_dialog.history_length_changed.connect(self.player.set_history_seconds)
+        self.settings_dialog.theme_changed.connect(self.theme_changed)
+        self.settings_dialog.transparency_changed.connect(self.transparency_changed)
 
         # restore the settings and widgets geometries
         self.restoreAppState()
@@ -238,6 +241,14 @@ class Friture(QMainWindow, ):
 
     def show_playback_changed(self, show: bool) -> None:
         self.playback_widget.setVisible(show)
+
+    # slot
+    def theme_changed(self, theme_name: str) -> None:
+        apply_theme(theme_name)
+
+    # slot  
+    def transparency_changed(self, enabled: bool) -> None:
+        GetStore().transparency_enabled = enabled
 
     # slot
     def about_called(self):
@@ -323,6 +334,10 @@ class Friture(QMainWindow, ):
         settings.beginGroup("AudioBackend")
         self.settings_dialog.restoreState(settings)
         settings.endGroup()
+
+        # Restore transparency setting to store
+        transparency_enabled = settings.value("transparency", 2, type=int)  # Default to checked
+        GetStore().transparency_enabled = bool(transparency_enabled)
 
     # slot
     def timer_toggle(self):
